@@ -13,7 +13,7 @@ def sample_spherical(npoints, ndim): #sample a vector of dimension "ndim" from t
     vec /= np.linalg.norm(vec, axis=0)
     return vec[:,0]
 
-def normalize_imges(data): #normalize pixel values to [-1, 1] 
+def normalize_imges(data): #normalize pixel values to [-1, 1]
     for i in range(data.shape[0]):
         img = data[i]
         data[i] = 2*(img - min(img))/(max(img) - min(img)) - 1
@@ -25,8 +25,8 @@ def simulate_neuron(Tsim, dt, trc, tref, vrest, vth, J):
     Jprev = 0
     spike_train = np.zeros(N)
     Vhist = np.zeros(N)
-    mutex = 0  
-    
+    mutex = 0
+
     for i in range(N):
         if mutex == 0:
             V = (J[i] + Jprev - (1-2*trc/dt)*Vprev)/(1+2*trc/dt) #bilinear transform
@@ -36,12 +36,12 @@ def simulate_neuron(Tsim, dt, trc, tref, vrest, vth, J):
                 spike_train[i] = 1
                 V = vrest
                 mutex = np.round(tref/dt)
-            Vhist[i] = V 
+            Vhist[i] = V
             Jprev = J[i]
             Vprev = V
         else:
             mutex -= 1
-    
+
     return Vhist, spike_train
 
 def Gaussian_filter(Tsim, dt, tau):
@@ -56,7 +56,7 @@ def PSC_filter(Tsim, dt, tau):
     h[0:len(h)//2] = 0
     h = (1/dt)*h/np.sum(h)
     return h
-    
+
 np.random.seed(18945) #to get reproducable results
 plt.close('all')
 digits = load_digits()
@@ -102,18 +102,18 @@ for i in range(M): #generate neurons randomly, record output and save the model
     e_vec[i,:] = e
     a_x = np.zeros(N_train)
     #for LIF neuron -> should be vecorized ideally
-    for j in range(N_train):        
-        if np.multiply(alpha, np.inner(e, x_train[j,:])) + Jbias > 1: 
+    for j in range(N_train):
+        if np.multiply(alpha, np.inner(e, x_train[j,:])) + Jbias > 1:
             a_x[j] = 1/(tref - trc*np.log(1 - 1/(np.multiply(alpha, np.inner(e, x_train[j,:])) + Jbias)))
         else:
             a_x[j] = 0
-        
+
     A_train[:,i] = a_x
 
 
 mu, sigma = 0, 0.01*np.max(A_train) # mean and standard deviation
 s = np.random.normal(mu, sigma, A_train.shape)
-A_noisy = np.add(A_train, s) 
+A_noisy = np.add(A_train, s)
 
 #More stable to use lstq instead of inv
 d_reg = np.linalg.lstsq(
@@ -147,35 +147,35 @@ for i in range(M): #pops saved parameters of neurons and record output
     a_x = np.zeros((N_test, Tlen))
     s_x = np.zeros((N_test, Tlen))
     #for LIF neuron -> should be vecorized ideally
-    for j in range(N_test):        
+    for j in range(N_test):
         J = np.multiply(alpha, np.inner(e, x_test[j,:])) + Jbias
         Jin = np.concatenate((Jbias*np.ones(Tlen//4), J*np.ones(3*Tlen//4))) #present input to network at Tsim//2
         #Jin = J*np.ones(Tlen)
-        Vhist, spike_train = simulate_neuron(Tsim, dt, trc, tref, vrest, vth, Jin)  
+        Vhist, spike_train = simulate_neuron(Tsim, dt, trc, tref, vrest, vth, Jin)
         a_x[j,:] = np.convolve(spike_train, h, 'same')
         spike_train[spike_train == 0] = -1
         s_x[j,:] = np.multiply(spike_train, t)
-        
+
     A_test[:,:,i] = a_x
     S_test[:,:,i] = s_x
 
 error_history = np.zeros(Tlen)
 for t in range(Tlen):
     x_hat_test = np.dot(A_test[:,t,:], d_reg.T) #decode activity of the population
-    
+
     cnt = 0
-    for i in range(N_test): #count error rate of model    
+    for i in range(N_test): #count error rate of model
         if np.argmax(x_hat_test[i]) == np.argmax(one_hot_test[i]):
             cnt += 0
         else:
             cnt += 1
-    
+
     error_rate = 100 - 100*cnt/N_test #compute error rate of model
     error_history[t] = error_rate
     #print('Accuracy of model: ', round(error_rate, 2), '%')
 
 t = np.linspace(0, Tsim, Tlen)
-plt.figure(1)    
+plt.figure(1)
 plt.plot(t, error_history, '.-')
 plt.title('Accuracy of model in function of time')
 plt.xlabel('Time [s]')
@@ -193,13 +193,13 @@ ax.set_ylim([-1, 110])
 accuracygraph, = ax.plot([], [])
 dot, = ax.plot([], [], 'o', color='red')
 props = dict(boxstyle='square', facecolor='white', alpha=0.5)
-textstr = "Accuracy: " + str(np.trunc(Y[0]*10)/10) + "%" 
+textstr = "Accuracy: " + str(np.trunc(Y[0]*10)/10) + "%"
 box = ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=18,
         verticalalignment='top', bbox=props)
 def accuracy_anim(i):
     accuracygraph.set_data(t[:i],Y[:i])
     dot.set_data(t[i],Y[i])
-    textstr = "Accuracy: " + str(np.trunc(Y[i]*10)/10) + "%" 
+    textstr = "Accuracy: " + str(np.trunc(Y[i]*10)/10) + "%"
     box.set_text(textstr)
 
 anim = animation.FuncAnimation(fig, accuracy_anim, frames=len(t), interval=1)
@@ -211,7 +211,7 @@ plt.show()
 
 Writer = animation.writers['ffmpeg']
 writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
-anim.save('im.mp4', writer=writer) 
+anim.save('im.mp4', writer=writer)
 
 #Neural activity
 events = S_test[0,:,:].T
